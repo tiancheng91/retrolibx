@@ -1,0 +1,94 @@
+version: 1
+systems:
+  nes:
+    name: Nintendo Entertainment System
+    short_name: NES
+    aliases: [Nintendo - Nintendo Entertainment System, Famicom]
+    extensions: [nes, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Nintendo Entertainment System]}
+      rocknix: {directory: [nes]}
+      es-de: {directory: [nes]}
+      pegasus: {shortname: [nes]}
+  snes:
+    name: Super Nintendo Entertainment System
+    short_name: SNES
+    aliases: [Nintendo - Super Nintendo Entertainment System, Super Famicom]
+    extensions: [sfc, smc, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Super Nintendo Entertainment System]}
+      rocknix: {directory: [snes]}
+      es-de: {directory: [snes]}
+      pegasus: {shortname: [snes]}
+  gb:
+    name: Game Boy
+    aliases: [Nintendo Game Boy, Nintendo - Game Boy]
+    extensions: [gb, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Game Boy]}
+      rocknix: {directory: [gb]}
+      es-de: {directory: [gb]}
+      pegasus: {shortname: [gb]}
+  gbc:
+    name: Game Boy Color
+    aliases: [Nintendo Game Boy Color, Nintendo - Game Boy Color]
+    extensions: [gbc, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Game Boy Color]}
+      rocknix: {directory: [gbc]}
+      es-de: {directory: [gbc]}
+      pegasus: {shortname: [gbc]}
+  gba:
+    name: Game Boy Advance
+    aliases: [Nintendo Game Boy Advance, Nintendo - Game Boy Advance, GameBoy Advance]
+    extensions: [gba, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Game Boy Advance]}
+      rocknix: {directory: [gba]}
+      es-de: {directory: [gba]}
+      pegasus: {shortname: [gba]}
+  n64:
+    name: Nintendo 64
+    aliases: [Nintendo - Nintendo 64]
+    extensions: [z64, n64, v64, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Nintendo - Nintendo 64]}
+      rocknix: {directory: [n64]}
+      es-de: {directory: [n64]}
+      pegasus: {shortname: [n64]}
+  psx:
+    name: PlayStation
+    aliases: [Sony PlayStation, Sony - PlayStation, PlayStation 1, PS1]
+    extensions: [cue, chd, pbp, m3u, iso]
+    platforms:
+      retroarch: {playlist: [Sony - PlayStation]}
+      rocknix: {directory: [psx]}
+      es-de: {directory: [psx]}
+      pegasus: {shortname: [psx]}
+  psp:
+    name: PlayStation Portable
+    aliases: [Sony PSP, Sony - PlayStation Portable]
+    extensions: [iso, cso, pbp]
+    platforms:
+      retroarch: {playlist: [Sony - PlayStation Portable]}
+      rocknix: {directory: [psp]}
+      es-de: {directory: [psp]}
+      pegasus: {shortname: [psp]}
+  dreamcast:
+    name: Dreamcast
+    aliases: [Sega Dreamcast, Sega - Dreamcast]
+    extensions: [gdi, cdi, chd, cue]
+    platforms:
+      retroarch: {playlist: [Sega - Dreamcast]}
+      rocknix: {directory: [dreamcast]}
+      es-de: {directory: [dreamcast]}
+      pegasus: {shortname: [dreamcast]}
+  megadrive:
+    name: Mega Drive
+    aliases: [Sega Mega Drive, Sega Genesis, Sega - Mega Drive - Genesis]
+    extensions: [md, gen, bin, zip, 7z]
+    platforms:
+      retroarch: {playlist: [Sega - Mega Drive - Genesis]}
+      rocknix: {directory: [megadrive]}
+      es-de: {directory: [megadrive]}
+      pegasus: {shortname: [megadrive]}
