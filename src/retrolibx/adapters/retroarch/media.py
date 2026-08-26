@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from retrolibx.core.models import Media
+from retrolibx.utils import FileIndex
 
 _INVALID = str.maketrans(
     {
@@ -26,7 +27,9 @@ def thumbnail_name(label: str) -> str:
     return label.translate(_INVALID)
 
 
-def resolve_media(root: Path, playlist_name: str, label: str) -> Media:
+def resolve_media(
+    root: Path, playlist_name: str, label: str, resolver: FileIndex | None = None
+) -> Media:
     media = Media()
     stem = thumbnail_name(label)
     for directory, field in _KINDS.items():
@@ -35,6 +38,15 @@ def resolve_media(root: Path, playlist_name: str, label: str) -> Media:
             if candidate.is_file():
                 setattr(media, field, candidate)
                 break
+            if resolver:
+                resolved = resolver.resolve(
+                    f"{stem}{extension}",
+                    bases=(candidate.parent,),
+                    preferred_parts=(directory, field),
+                )
+                if resolved:
+                    setattr(media, field, resolved)
+                    break
     return media
 
 

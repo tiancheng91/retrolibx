@@ -9,6 +9,7 @@ from retrolibx.core.models import Capabilities, Diagnostic, Game, Library, Syste
 from retrolibx.core.operations import ExportIntent, FileRequest, TextRequest
 from retrolibx.core.options import ExportOptions, ImportOptions
 from retrolibx.errors import ParseError
+from retrolibx.utils import FileIndex, find_metadata
 
 from ..base import DetectionResult, ImportResult, LibraryAdapter
 from .gamelist import read_gamelist, write_gamelist
@@ -32,14 +33,7 @@ class EmulationStationAdapter(LibraryAdapter):
 
     @staticmethod
     def _gamelists(path: Path) -> list[Path]:
-        if path.is_file() and path.name == "gamelist.xml":
-            return [path]
-        if not path.is_dir():
-            return []
-        direct = path / "gamelist.xml"
-        if direct.is_file():
-            return [direct]
-        return sorted(path.glob("*/gamelist.xml"))
+        return find_metadata(path, ("gamelist.xml",))
 
     def system_directory(self, system_id: str) -> str | None:
         return self.systems.directory(system_id, self.platform_id) or system_id
@@ -47,9 +41,11 @@ class EmulationStationAdapter(LibraryAdapter):
     def import_library(self, path: Path, options: ImportOptions) -> ImportResult:
         del options
         root = path if path.is_dir() else path.parent
+        gamelists = self._gamelists(path)
+        resolver = FileIndex(root, exclude=gamelists)
         systems: list[System] = []
         diagnostics: list[Diagnostic] = []
-        for gamelist in self._gamelists(path):
+        for gamelist in gamelists:
             source_name = gamelist.parent.name
             record = self.systems.resolve(source_name)
             system = System(
@@ -58,7 +54,7 @@ class EmulationStationAdapter(LibraryAdapter):
                 metadata={self.name: {"directory": source_name}},
             )
             try:
-                games, warnings = read_gamelist(gamelist)
+                games, warnings = read_gamelist(gamelist, resolver)
             except ParseError as exc:
                 diagnostics.append(
                     Diagnostic(

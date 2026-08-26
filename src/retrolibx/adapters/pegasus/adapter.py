@@ -19,6 +19,7 @@ from retrolibx.core.normalize import parse_bool, parse_date, parse_players
 from retrolibx.core.operations import ExportIntent, FileRequest, TextRequest
 from retrolibx.core.options import ExportOptions, ImportOptions
 from retrolibx.errors import ParseError
+from retrolibx.utils import FileIndex, find_metadata
 
 from ..base import DetectionResult, ImportResult, LibraryAdapter
 from .metadata import field, parse_metadata, render_records
@@ -33,12 +34,7 @@ class PegasusAdapter(LibraryAdapter):
 
     @staticmethod
     def _metadata_files(path: Path) -> list[Path]:
-        if path.is_file() and path.name == "metadata.pegasus.txt":
-            return [path]
-        if not path.is_dir():
-            return []
-        direct = path / "metadata.pegasus.txt"
-        return [direct] if direct.is_file() else sorted(path.glob("*/metadata.pegasus.txt"))
+        return find_metadata(path, ("metadata.pegasus.txt",))
 
     @classmethod
     def detect(cls, path: Path) -> DetectionResult:
@@ -52,9 +48,11 @@ class PegasusAdapter(LibraryAdapter):
     def import_library(self, path: Path, options: ImportOptions) -> ImportResult:
         del options
         root = path if path.is_dir() else path.parent
+        metadata_files = self._metadata_files(path)
+        resolver = FileIndex(root, exclude=metadata_files)
         systems: list[System] = []
         diagnostics: list[Diagnostic] = []
-        for metadata_path in self._metadata_files(path):
+        for metadata_path in metadata_files:
             try:
                 text = metadata_path.read_text(encoding="utf-8-sig")
             except OSError as exc:
@@ -88,13 +86,20 @@ class PegasusAdapter(LibraryAdapter):
                         )
                     )
                     continue
-                roms = [
-                    Rom(
-                        path=(metadata_path.parent / filename).resolve(strict=False),
-                        metadata={"source_path": filename},
+                roms = []
+                for filename in filenames:
+                    resolved = resolver.resolve(
+                        filename,
+                        bases=(metadata_path.parent,),
+                        preferred_parts=("rom", "roms", system.id),
                     )
-                    for filename in filenames
-                ]
+                    roms.append(
+                        Rom(
+                            path=resolved
+                            or (metadata_path.parent / filename).resolve(strict=False),
+                            metadata={"source_path": filename},
+                        )
+                    )
                 players_min, players_max = parse_players(field(record, "players"))
                 raw_rating = field(record, "rating")
                 try:
@@ -105,13 +110,17 @@ class PegasusAdapter(LibraryAdapter):
                         rating = max(0.0, min(1.0, rating))
                 except ValueError:
                     rating = None
-                assets = {
-                    key.removeprefix("assets."): (metadata_path.parent / value[-1]).resolve(
-                        strict=False
-                    )
-                    for key, value in record.items()
-                    if key.startswith("assets.") and value
-                }
+                assets: dict[str, Path] = {}
+                for key, values in record.items():
+                    if not key.startswith("assets.") or not values:
+                        continue
+                    kind = key.removeprefix("assets.")
+                    value = values[-1]
+                    assets[kind] = resolver.resolve(
+                        value,
+                        bases=(metadata_path.parent,),
+                        preferred_parts=("media", "images", kind),
+                    ) or (metadata_path.parent / value).resolve(strict=False)
                 media = Media(
                     box_front=assets.pop("boxFront", assets.pop("box_front", None)),
                     screenshot=assets.pop("screenshot", None),

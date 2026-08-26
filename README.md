@@ -28,6 +28,22 @@ The source is read-only by default. ROM modes are `copy`, `move`, `symlink` (`li
 
 Aliases: `ra` → `retroarch`, `es` → `emulationstation`, `esde` → `es-de`.
 
+## Repository discovery
+
+RetroLibX does not require one fixed repository layout. It recursively discovers `.lpl`,
+`gamelist.xml`, and `metadata.pegasus.txt` below the supplied source root (excluding tool and
+VCS directories). Referenced ROM and media paths are resolved in this order:
+
+1. an existing absolute path;
+2. a path relative to the metadata file or detected frontend root;
+3. a path relative to the supplied repository root;
+4. a unique trailing-path match, which handles stale device roots such as `/storage/roms`;
+5. a unique filename match, with semantic directory hints for ROMs, covers, screenshots,
+   videos, and manuals.
+
+Ambiguous filename matches are intentionally left unresolved and reported by validation instead
+of silently selecting the wrong game or artwork.
+
 ## Development
 
 ```bash
@@ -38,4 +54,3 @@ uv run mypy src
 ```
 
 Architecture and acceptance criteria are documented in [`specs/v1`](specs/v1). Adapters implement detection/import/render only. Rendering returns an `ExportIntent`; the planner resolves all conflicts and paths; the executor is the sole filesystem writer.
-

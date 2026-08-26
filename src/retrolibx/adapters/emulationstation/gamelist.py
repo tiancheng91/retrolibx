@@ -10,6 +10,7 @@ from lxml import etree
 from retrolibx.core.models import Game, Media, Rom
 from retrolibx.core.normalize import parse_bool, parse_date, parse_datetime, parse_players
 from retrolibx.errors import ParseError
+from retrolibx.utils import FileIndex
 
 _KNOWN = {
     "path",
@@ -34,14 +35,23 @@ _KNOWN = {
 }
 
 
-def _resolve(base: Path, value: str | None) -> Path | None:
+def _resolve(
+    base: Path,
+    value: str | None,
+    resolver: FileIndex | None,
+    preferred_parts: tuple[str, ...] = (),
+) -> Path | None:
     if not value:
         return None
     path = Path(value).expanduser()
+    if resolver:
+        resolved = resolver.resolve(path, bases=(base,), preferred_parts=preferred_parts)
+        if resolved:
+            return resolved
     return path if path.is_absolute() else (base / path).resolve(strict=False)
 
 
-def read_gamelist(path: Path) -> tuple[list[Game], list[str]]:
+def read_gamelist(path: Path, resolver: FileIndex | None = None) -> tuple[list[Game], list[str]]:
     parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, recover=False)
     try:
         root = etree.parse(str(path), parser).getroot()
@@ -57,7 +67,7 @@ def read_gamelist(path: Path) -> tuple[list[Game], list[str]]:
         if not raw_rom:
             warnings.append(f"game #{index} has no path")
             continue
-        rom = _resolve(path.parent, raw_rom)
+        rom = _resolve(path.parent, raw_rom, resolver, ("rom", "roms"))
         if rom is None:
             continue
         players_min, players_max = parse_players(fields.get("players"))
@@ -79,11 +89,26 @@ def read_gamelist(path: Path) -> tuple[list[Game], list[str]]:
                 sort_name=fields.get("sortname") or None,
                 roms=[Rom(path=rom, metadata={"source_path": raw_rom})],
                 media=Media(
-                    box_front=_resolve(path.parent, fields.get("image")),
-                    screenshot=_resolve(path.parent, fields.get("thumbnail")),
-                    marquee=_resolve(path.parent, fields.get("marquee")),
-                    video=_resolve(path.parent, fields.get("video")),
-                    manual=_resolve(path.parent, fields.get("manual")),
+                    box_front=_resolve(
+                        path.parent,
+                        fields.get("image"),
+                        resolver,
+                        ("images", "boxart", "covers", "named_boxarts"),
+                    ),
+                    screenshot=_resolve(
+                        path.parent,
+                        fields.get("thumbnail"),
+                        resolver,
+                        ("images", "screenshots", "snaps", "named_snaps"),
+                    ),
+                    marquee=_resolve(
+                        path.parent,
+                        fields.get("marquee"),
+                        resolver,
+                        ("images", "marquees", "logos"),
+                    ),
+                    video=_resolve(path.parent, fields.get("video"), resolver, ("videos",)),
+                    manual=_resolve(path.parent, fields.get("manual"), resolver, ("manuals",)),
                 ),
                 description=fields.get("desc") or None,
                 developer=fields.get("developer") or None,

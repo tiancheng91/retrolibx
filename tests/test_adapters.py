@@ -54,6 +54,42 @@ def test_retroarch_import_and_render(tmp_path: Path) -> None:
     assert any(item.destination.name.endswith(".lpl") for item in intent.texts)
 
 
+def test_retroarch_nested_bundle_and_sibling_rom_directory(tmp_path: Path) -> None:
+    bundle = tmp_path / "GBA 226款游戏合集"
+    rom = make_rom(bundle / "ROM/GBA/GBA 001.gba")
+    retroarch = bundle / "retroarch"
+    retroarch.joinpath("playlists").mkdir(parents=True)
+    retroarch.joinpath("playlists/GBA.lpl").write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "path": "/storage/roms/GBA/GBA 001.gba",
+                        "label": "GBA 001",
+                        "core_path": "DETECT",
+                        "core_name": "DETECT",
+                        "crc32": "DETECT",
+                        "db_name": "GBA.lpl",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    box = make_rom(retroarch / "thumbnails/GBA/Named_Boxarts/GBA 001.png", b"png")
+
+    adapter = RetroArchAdapter(systems())
+    detection = adapter.detect(bundle)
+    assert detection.confidence == 0.95
+    assert "nested RetroArch directory" in detection.evidence[1]
+
+    library = adapter.import_library(bundle, ImportOptions()).library
+    game = library.systems[0].games[0]
+    assert library.systems[0].id == "gba"
+    assert game.roms[0].path == rom.resolve()
+    assert game.media.box_front == box
+
+
 def write_es(root: Path) -> Path:
     rom = make_rom(root / "gba/Advance Wars.gba")
     image = make_rom(root / "gba/images/Advance Wars.png", b"png")
@@ -76,6 +112,24 @@ def test_emulationstation_roundtrip_intent(tmp_path: Path) -> None:
     xml = intent.texts[0].content
     assert "<name>Advance Wars</name>" in xml
     assert "<favorite>true</favorite>" in xml
+
+
+def test_emulationstation_recursive_metadata_and_stale_paths(tmp_path: Path) -> None:
+    root = tmp_path / "custom-repository"
+    rom = make_rom(root / "payload/games/handheld/GBA 001.gba")
+    image = make_rom(root / "art/covers/GBA 001.png", b"png")
+    metadata = root / "configs/frontends/es/systems/gba/gamelist.xml"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        """<gameList><game><path>/old/device/GBA 001.gba</path>"
+        "<name>GBA 001</name><image>/old/art/GBA 001.png</image></game></gameList>""",
+        encoding="utf-8",
+    )
+    adapter = EmulationStationAdapter(systems())
+    assert adapter.detect(root).confidence == 0.7
+    game = adapter.import_library(root, ImportOptions()).library.systems[0].games[0]
+    assert game.roms[0].path == rom.resolve()
+    assert game.media.box_front == image.resolve()
 
 
 def test_profile_detection(tmp_path: Path) -> None:
@@ -114,3 +168,23 @@ launch: retroarch {file.path}
     assert game.launch.command == "retroarch {file.path}"  # type: ignore[union-attr]
     intent = adapter.render_library(library, tmp_path / "out", ExportOptions())
     assert "game: Advance Wars" in intent.texts[0].content
+
+
+def test_pegasus_recursive_metadata_and_unique_filename_fallback(tmp_path: Path) -> None:
+    root = tmp_path / "library"
+    rom = make_rom(root / "content/cartridges/GBA 002.gba")
+    metadata = root / "frontend/pegasus/config/gba/metadata.pegasus.txt"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        """collection: Game Boy Advance
+shortname: gba
+
+game: GBA 002
+file: /storage/roms/GBA/GBA 002.gba
+""",
+        encoding="utf-8",
+    )
+    adapter = PegasusAdapter(systems())
+    assert adapter.detect(root).confidence == 0.96
+    game = adapter.import_library(root, ImportOptions()).library.systems[0].games[0]
+    assert game.roms[0].path == rom.resolve()

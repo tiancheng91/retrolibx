@@ -9,6 +9,7 @@ from retrolibx.core.models import Capabilities, Diagnostic, Game, LaunchConfig, 
 from retrolibx.core.operations import ExportIntent, FileRequest, TextRequest
 from retrolibx.core.options import ExportOptions, ImportOptions
 from retrolibx.errors import ParseError
+from retrolibx.utils import FileIndex, find_metadata
 
 from ..base import DetectionResult, ImportResult, LibraryAdapter
 from .media import media_destination, resolve_media
@@ -20,24 +21,63 @@ class RetroArchAdapter(LibraryAdapter):
     aliases = ("ra",)
     capabilities = Capabilities(artwork=True, launch_config=True)
 
+    @staticmethod
+    def _layout(path: Path) -> tuple[Path, Path, Path]:
+        """Return RetroArch root, playlist directory, and enclosing package root."""
+        if path.is_file():
+            playlist_dir = path.parent
+            root = (
+                playlist_dir.parent if playlist_dir.name.casefold() == "playlists" else playlist_dir
+            )
+            return root, playlist_dir, root.parent
+
+        direct = path / "playlists"
+        if direct.is_dir():
+            return path, direct, path.parent
+
+        if path.is_dir():
+            nested_roots = sorted(
+                child
+                for child in path.iterdir()
+                if child.is_dir()
+                and child.name.casefold() == "retroarch"
+                and (child / "playlists").is_dir()
+            )
+            if nested_roots:
+                root = nested_roots[0]
+                return root, root / "playlists", path
+
+        return path, path, path.parent
+
     @classmethod
     def detect(cls, path: Path) -> DetectionResult:
-        playlist_dir = path / "playlists" if path.is_dir() else path.parent
-        files = list(playlist_dir.glob("*.lpl")) if playlist_dir.is_dir() else []
-        confidence = 0.95 if files and playlist_dir.name == "playlists" else 0.75 if files else 0.0
+        root, _, package_root = cls._layout(path)
+        files = find_metadata(path, ("*.lpl",))
+        nested = root != path and package_root == path
+        conventional = any(item.parent.name.casefold() == "playlists" for item in files)
+        confidence = 0.95 if files and conventional else 0.75 if files else 0.0
+        evidence = [f"{len(files)} RetroArch playlist(s)"] if files else []
+        if nested:
+            evidence.append(f"nested RetroArch directory: {root.name}")
         return DetectionResult(
             format=cls.name,
             confidence=confidence,
-            evidence=[f"{len(files)} RetroArch playlist(s)"] if files else [],
+            evidence=evidence,
         )
 
     def import_library(self, path: Path, options: ImportOptions) -> ImportResult:
         del options
         root = path if path.is_dir() else path.parent
-        playlist_dir = root / "playlists" if (root / "playlists").is_dir() else root
+        playlists = find_metadata(path, ("*.lpl",))
+        resolver = FileIndex(root, exclude=playlists)
         diagnostics: list[Diagnostic] = []
         systems: list[System] = []
-        for playlist in sorted(playlist_dir.glob("*.lpl")):
+        for playlist in playlists:
+            playlist_root = (
+                playlist.parent.parent
+                if playlist.parent.name.casefold() == "playlists"
+                else playlist.parent
+            )
             record = self.systems.resolve(playlist.stem)
             system_id = record.id if record else playlist.stem.casefold().replace(" ", "-")
             system = System(
@@ -68,9 +108,18 @@ class RetroArchAdapter(LibraryAdapter):
                         )
                     )
                     continue
-                rom_path = Path(raw_path).expanduser()
-                if not rom_path.is_absolute():
-                    rom_path = (root / rom_path).resolve(strict=False)
+                rom_path = resolver.resolve(
+                    raw_path,
+                    bases=(playlist.parent, playlist_root),
+                    preferred_parts=("rom", "roms", system.id),
+                )
+                if rom_path is None:
+                    source_path = Path(raw_path).expanduser()
+                    rom_path = (
+                        source_path
+                        if source_path.is_absolute()
+                        else (playlist_root / source_path).resolve(strict=False)
+                    )
                 launch = LaunchConfig(
                     core=str(item.get("core_name"))
                     if item.get("core_name") not in (None, "DETECT")
@@ -86,7 +135,7 @@ class RetroArchAdapter(LibraryAdapter):
                     roms=[
                         Rom(path=rom_path, crc32=str(item["crc32"]) if item.get("crc32") else None)
                     ],
-                    media=resolve_media(root, playlist.stem, label),
+                    media=resolve_media(playlist_root, playlist.stem, label, resolver),
                     launch=launch,
                     source_metadata={"retroarch": {"db_name": item.get("db_name"), **unknown}},
                 )
