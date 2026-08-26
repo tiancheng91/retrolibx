@@ -16,6 +16,15 @@ uv run retrolibx convert /path/to/source --to rocknix --output /path/to/target -
 uv run retrolibx convert /path/to/source --to rocknix --output /path/to/target
 ```
 
+For a non-standard RetroArch playlist whose title is stored in another field, select it
+explicitly. The original `label` is still used to match thumbnails:
+
+```bash
+uv run retrolibx scan /path/to/library --game-name-field core_name
+uv run retrolibx convert /path/to/library --to rocknix --output /path/to/target \
+  --game-name-field core_name
+```
+
 The source is read-only by default. ROM modes are `copy`, `move`, `symlink` (`link` alias), `hardlink`, and `none`; media modes are `copy`, `symlink`, and `hardlink`. Conflict policies are `skip`, `overwrite`, `rename`, `error`, and `newer`.
 
 ## Commands

@@ -66,7 +66,6 @@ class RetroArchAdapter(LibraryAdapter):
         )
 
     def import_library(self, path: Path, options: ImportOptions) -> ImportResult:
-        del options
         root = path if path.is_dir() else path.parent
         playlists = find_metadata(path, ("*.lpl",))
         resolver = FileIndex(root, exclude=playlists)
@@ -96,7 +95,11 @@ class RetroArchAdapter(LibraryAdapter):
                 continue
             for item in items:
                 raw_path = str(item.get("path", "")).strip()
-                label = str(item.get("label") or Path(raw_path).stem or "Unknown")
+                resource_label = str(item.get("label") or Path(raw_path).stem or "Unknown")
+                configured_name = item.get(options.game_name_field)
+                game_name = str(configured_name).strip() if configured_name is not None else ""
+                if not game_name:
+                    game_name = resource_label
                 if not raw_path:
                     diagnostics.append(
                         Diagnostic(
@@ -104,7 +107,7 @@ class RetroArchAdapter(LibraryAdapter):
                             code="missing-rom-reference",
                             message="Playlist item has no path",
                             path=playlist,
-                            game_name=label,
+                            game_name=game_name,
                         )
                     )
                     continue
@@ -131,13 +134,20 @@ class RetroArchAdapter(LibraryAdapter):
                     key: value for key, value in item.items() if key not in known
                 }
                 game = Game(
-                    name=label,
+                    name=game_name,
                     roms=[
                         Rom(path=rom_path, crc32=str(item["crc32"]) if item.get("crc32") else None)
                     ],
-                    media=resolve_media(playlist_root, playlist.stem, label, resolver),
+                    media=resolve_media(playlist_root, playlist.stem, resource_label, resolver),
                     launch=launch,
-                    source_metadata={"retroarch": {"db_name": item.get("db_name"), **unknown}},
+                    source_metadata={
+                        "retroarch": {
+                            "db_name": item.get("db_name"),
+                            "resource_label": resource_label,
+                            "game_name_field": options.game_name_field,
+                            **unknown,
+                        }
+                    },
                 )
                 system.games.append(game)
             systems.append(system)

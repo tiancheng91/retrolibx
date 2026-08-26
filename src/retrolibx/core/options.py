@@ -30,6 +30,7 @@ class ConflictPolicy(StrEnum):
 
 class ImportOptions(BaseModel):
     calculate_hashes: bool = False
+    game_name_field: str = "label"
 
 
 class ExportOptions(BaseModel):

@@ -90,6 +90,42 @@ def test_retroarch_nested_bundle_and_sibling_rom_directory(tmp_path: Path) -> No
     assert game.media.box_front == box
 
 
+def test_retroarch_custom_game_name_field_keeps_label_for_media(tmp_path: Path) -> None:
+    root = tmp_path / "bundle"
+    rom = make_rom(root / "ROM/GBA/GBA 225.gba")
+    retroarch = root / "retroarch"
+    retroarch.joinpath("playlists").mkdir(parents=True)
+    retroarch.joinpath("playlists/GBA.lpl").write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "path": "/ROM/GBA/GBA 225.gba",
+                        "label": "GBA 225",
+                        "core_path": "/retroarch/cores/vba_next_libretro_libnx.nro",
+                        "core_name": "龙珠Z 布欧的愤怒v1.2 DMG汉化版",
+                        "crc32": "GBA.lpl",
+                        "db_name": "",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    box = make_rom(retroarch / "thumbnails/GBA/Named_Boxarts/GBA 225.png", b"png")
+
+    library = (
+        RetroArchAdapter(systems())
+        .import_library(root, ImportOptions(game_name_field="core_name"))
+        .library
+    )
+    game = library.systems[0].games[0]
+    assert game.name == "龙珠Z 布欧的愤怒v1.2 DMG汉化版"
+    assert game.roms[0].path == rom.resolve()
+    assert game.media.box_front == box.resolve()
+    assert game.source_metadata["retroarch"]["resource_label"] == "GBA 225"
+
+
 def write_es(root: Path) -> Path:
     rom = make_rom(root / "gba/Advance Wars.gba")
     image = make_rom(root / "gba/images/Advance Wars.png", b"png")

@@ -110,9 +110,17 @@ def scan(
     source_format: Annotated[str | None, typer.Option("--from")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
     calculate_hashes: Annotated[bool, typer.Option("--hash")] = False,
+    game_name_field: Annotated[
+        str, typer.Option("--game-name-field", help="Source field used as the game name")
+    ] = "label",
 ) -> None:
     _, library = ConversionService().import_library(
-        path, source_format, ImportOptions(calculate_hashes=calculate_hashes)
+        path,
+        source_format,
+        ImportOptions(
+            calculate_hashes=calculate_hashes,
+            game_name_field=game_name_field,
+        ),
     )
     if json_output:
         _json(library)
@@ -126,8 +134,13 @@ def inspect_command(
     path: Path,
     source_format: Annotated[str | None, typer.Option("--from")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
+    game_name_field: Annotated[
+        str, typer.Option("--game-name-field", help="Source field used as the game name")
+    ] = "label",
 ) -> None:
-    _, library = ConversionService().import_library(path, source_format)
+    _, library = ConversionService().import_library(
+        path, source_format, ImportOptions(game_name_field=game_name_field)
+    )
     if json_output:
         _json(library)
     else:
@@ -146,8 +159,13 @@ def validate(
     path: Path,
     source_format: Annotated[str | None, typer.Option("--from")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
+    game_name_field: Annotated[
+        str, typer.Option("--game-name-field", help="Source field used as the game name")
+    ] = "label",
 ) -> None:
-    _, library = ConversionService().import_library(path, source_format)
+    _, library = ConversionService().import_library(
+        path, source_format, ImportOptions(game_name_field=game_name_field)
+    )
     if json_output:
         _json(library.diagnostics)
     else:
@@ -172,12 +190,16 @@ def convert(
     conflict: Annotated[ConflictPolicy, typer.Option("--conflict")] = ConflictPolicy.SKIP,
     in_place: Annotated[bool, typer.Option("--in-place")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
+    game_name_field: Annotated[
+        str, typer.Option("--game-name-field", help="Source field used as the game name")
+    ] = "label",
 ) -> None:
     result = ConversionService().convert(
         source,
         output,
         target_format,
         source_format=source_format,
+        import_options=ImportOptions(game_name_field=game_name_field),
         export_options=ExportOptions(
             rom_mode=rom_mode, media_mode=media_mode, conflict=conflict, in_place=in_place
         ),
