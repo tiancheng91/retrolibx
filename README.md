@@ -1,3 +1,17 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/tiancheng91/RetroLibX/main/assets/repo-card.png" alt="RetroLibX — Universal Retro Game Library Converter" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/tiancheng91/RetroLibX/actions/workflows/ci.yml"><img src="https://github.com/tiancheng91/RetroLibX/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/tiancheng91/RetroLibX/actions/workflows/publish.yml"><img src="https://github.com/tiancheng91/RetroLibX/actions/workflows/publish.yml/badge.svg" alt="Publish"></a>
+  <a href="https://pypi.org/project/retrolibx/"><img src="https://img.shields.io/pypi/v/retrolibx?label=pypi&color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/retrolibx/"><img src="https://img.shields.io/pypi/pyversions/retrolibx" alt="Python versions"></a>
+  <a href="https://github.com/tiancheng91/RetroLibX/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/retrolibx" alt="License"></a>
+</p>
+
+---
+
 # RetroLibX
 
 **Universal Retro Game Library Converter**
@@ -63,3 +77,7 @@ uv run mypy src
 ```
 
 Architecture and acceptance criteria are documented in [`specs/v1`](specs/v1). Adapters implement detection/import/render only. Rendering returns an `ExportIntent`; the planner resolves all conflicts and paths; the executor is the sole filesystem writer.
+
+## License
+
+RetroLibX is released under the [MIT License](LICENSE).
