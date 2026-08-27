@@ -18,24 +18,37 @@
 
 RetroLibX migrates ROM references, metadata, artwork, videos, collections, and launch settings between RetroArch, generic EmulationStation, ROCKNIX, ES-DE, and Pegasus. All conversions pass through a typed, platform-neutral intermediate representation rather than point-to-point converters.
 
-## Install and run
+## Quick Start
 
-Python 3.12+ and [uv](https://docs.astral.sh/uv/) are required.
+Run RetroLibX directly with [uv](https://docs.astral.sh/uv/) without installing it:
 
 ```bash
-uv sync
-uv run retrolibx detect /path/to/library
-uv run retrolibx scan /path/to/library
-uv run retrolibx convert /path/to/source --to rocknix --output /path/to/target --dry-run
-uv run retrolibx convert /path/to/source --to rocknix --output /path/to/target
+uvx retrolibx --help
+```
+
+Convert a RetroArch library to ROCKNIX:
+
+```bash
+uvx retrolibx convert /path/to/retroarch \
+  --to rocknix \
+  --output /path/to/rocknix
+```
+
+Preview the conversion without writing any files:
+
+```bash
+uvx retrolibx convert /path/to/retroarch \
+  --to rocknix \
+  --output /path/to/rocknix \
+  --dry-run
 ```
 
 For a non-standard RetroArch playlist whose title is stored in another field, select it
 explicitly. The original `label` is still used to match thumbnails:
 
 ```bash
-uv run retrolibx scan /path/to/library --game-name-field core_name
-uv run retrolibx convert /path/to/library --to rocknix --output /path/to/target \
+uvx retrolibx scan /path/to/library --game-name-field core_name
+uvx retrolibx convert /path/to/library --to rocknix --output /path/to/target \
   --game-name-field core_name
 ```
 
